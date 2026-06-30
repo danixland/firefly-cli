@@ -9,8 +9,9 @@ The Firefly III source is cloned at `../GITHUB/firefly-iii/` for reference only
 
 ## Architecture
 - `firefly_cli/` package. Shared primitives: `config.py` (env over TOML file),
-  `client.py` (HTTP + auth + error surfacing), `resolver.py` (name->id),
-  `output.py` (JSON default, `--human` tables), `registry.py` + `context.py`.
+  `client.py` (HTTP + auth + error surfacing), `errors.py` (FireflyError
+  hierarchy), `resolver.py` (name->id), `output.py` (JSON default, `--human`
+  tables), `registry.py` + `context.py`.
 - Commands live in `firefly_cli/commands/`, one module per group. Each command
   registers via the `@registry.command("group leaf", ...)` decorator.
 - `cli.py` builds argparse subparsers from the registry. `commands/__init__.py`
@@ -23,6 +24,7 @@ The Firefly III source is cloned at `../GITHUB/firefly-iii/` for reference only
    `fn(args, ctx) -> int`. `ctx` has `.client`, `.resolver`, `.human`.
 3. If it is a new module, add it to the import line in `commands/__init__.py`.
 4. Write a unit test under `tests/unit/` (mock `ctx.client` / `ctx.resolver`).
+5. Update `SKILL.md` (the agent-operating guide) with the new command.
 No other files change.
 
 ## Conventions
@@ -38,6 +40,11 @@ No other files change.
 - Integration tests in `tests/integration/` hit a LIVE TEST ACCOUNT, gated by
   `FIREFLY_TEST_URL` / `FIREFLY_TEST_TOKEN`, skipped otherwise. Write tests
   create-then-delete their own records. NEVER point these at real data.
+
+## Agent guide
+`SKILL.md` documents how an agent drives the `firefly` command (the JSON/exit
+contract, name resolution, task recipes). Keep it in sync when commands change.
+It carries skill frontmatter and is symlinked into the Claude Code skills dir.
 
 ## License
 GPLv2-only. Per-file header: `Copyright (C) 2026 Danilo M. <danix@danix.xyz>`.
