@@ -56,6 +56,14 @@ The command set grows over time; see `CLAUDE.md` for how to add one.
   is a withdrawal, revenue to asset is a deposit, asset to asset is a transfer).
   Override with `--type`.
 
+## For agents (skill)
+
+[`SKILL.md`](SKILL.md) is an agent-operating guide for driving `firefly`: the
+JSON/exit-code contract, name resolution, transaction-type inference, task
+recipes, and gotchas. It carries skill frontmatter, so it can be symlinked into
+a Claude Code skills directory to auto-activate on Firefly III and personal
+finance tasks.
+
 ## License
 
 Released under the GNU General Public License, version 2 only (GPLv2-only).
