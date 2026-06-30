@@ -25,6 +25,8 @@ The Firefly III source is cloned at `../GITHUB/firefly-iii/` for reference only
 3. If it is a new module, add it to the import line in `commands/__init__.py`.
 4. Write a unit test under `tests/unit/` (mock `ctx.client` / `ctx.resolver`).
 5. Update `SKILL.md` (the agent-operating guide) with the new command.
+6. Regenerate bash completion (it is generated, not hand-edited):
+   `python scripts/gen_completion.py > completions/firefly.bash`.
 No other files change.
 
 ## Conventions

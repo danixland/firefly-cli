@@ -6,7 +6,7 @@ def _set_args(p):
     p.add_argument("--url", help="Firefly III base URL")
     p.add_argument("--token", help="Personal Access Token")
 
-@registry.command("auth set", help="write url+token to config", args=_set_args)
+@registry.command("auth set", help="save url + token to the config file (no API call)", args=_set_args)
 def cmd_set(args, ctx):
     url = args.url or input("Firefly III URL: ").strip()
     token = args.token or getpass.getpass("Personal Access Token: ").strip()
@@ -14,7 +14,7 @@ def cmd_set(args, ctx):
     output.emit({"written": str(path)}, human=ctx.human)
     return 0
 
-@registry.command("auth test", help="verify connectivity and token")
+@registry.command("auth test", help="check the configured url + token reach Firefly")
 def cmd_test(args, ctx):
     resp = ctx.client.request("GET", "/api/v1/about")
     output.emit(resp.get("data", resp), human=ctx.human)

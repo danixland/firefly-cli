@@ -2,4 +2,4 @@
 # Copyright (C) 2026 Danilo M. <danix@danix.xyz>
 # Licensed under the GNU General Public License v2.0 only.
 
-__version__ = "0.1.0"
+__version__ = "0.2.1"

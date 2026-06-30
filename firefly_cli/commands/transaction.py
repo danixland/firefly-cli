@@ -30,7 +30,7 @@ def _add_args(p):
     p.add_argument("--type", default=None,
                    help="withdrawal|deposit|transfer (overrides inference)")
 
-@registry.command("tx add", help="record a transaction", args=_add_args)
+@registry.command("tx add", help="record a transaction; source/destination resolve to accounts, category/tags auto-create", args=_add_args)
 def cmd_add(args, ctx):
     src = ctx.resolver.account(args.source)
     dst = ctx.resolver.account(args.dest)
@@ -60,7 +60,7 @@ def _list_args(p):
     p.add_argument("--account", default=None, help="filter by account name")
     p.add_argument("--limit", type=int, default=20)
 
-@registry.command("tx list", help="list transactions", args=_list_args)
+@registry.command("tx list", help="list recent transactions (newest first)", args=_list_args)
 def cmd_list(args, ctx):
     if args.account:
         acc = ctx.resolver.account(args.account)
@@ -79,7 +79,7 @@ def cmd_list(args, ctx):
 def _id_arg(p):
     p.add_argument("id")
 
-@registry.command("tx get", help="show one transaction", args=_id_arg)
+@registry.command("tx get", help="show full details for one transaction by id", args=_id_arg)
 def cmd_get(args, ctx):
     resp = ctx.client.request("GET", f"/api/v1/transactions/{args.id}")
     output.emit(output.unwrap(resp), human=ctx.human)
@@ -88,7 +88,7 @@ def cmd_get(args, ctx):
 def _query_arg(p):
     p.add_argument("query")
 
-@registry.command("tx search", help="search transactions", args=_query_arg)
+@registry.command("tx search", help="search transactions by Firefly query string", args=_query_arg)
 def cmd_search(args, ctx):
     resp = ctx.client.request("GET", "/api/v1/search/transactions",
                               params={"query": args.query})

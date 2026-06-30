@@ -12,6 +12,26 @@ pip install -e .
 
 Requires Python 3.11 or newer. No third-party runtime dependencies.
 
+### Bash completion
+
+A completion script lives at `completions/firefly.bash`. Enable it by sourcing
+it from your shell profile, or install it system-wide:
+
+```bash
+# per-user: add to ~/.bashrc
+source /path/to/firefly-cli/completions/firefly.bash
+
+# or system-wide
+sudo cp completions/firefly.bash /usr/share/bash-completion/completions/firefly
+```
+
+It is generated from the command registry, never hand-edited. Regenerate after
+adding or changing commands:
+
+```bash
+python scripts/gen_completion.py > completions/firefly.bash
+```
+
 ## Configuration
 
 Provide your Firefly III URL and a personal access token in either way:
