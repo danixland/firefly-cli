@@ -57,6 +57,10 @@ firefly account create <name> --type asset|expense|revenue
         [--opening-balance N] [--currency CODE]
 firefly tx add <amount> --from <acct> --to <acct>
         [--desc TEXT] [--date YYYY-MM-DD] [--category NAME] [--tags a,b] [--type T]
+firefly tx edit <id>
+        [--amount N] [--date YYYY-MM-DD] [--desc TEXT] [--from <acct>] [--to <acct>]
+        [--category NAME] [--tags a,b] [--type T]   # only fields passed are changed
+firefly tx delete <id> --yes                        # --yes required, no prompt
 firefly tx list [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--account NAME] [--limit N]
 firefly tx get <id>
 firefly tx search <query>
@@ -116,6 +120,14 @@ Returns a transaction group: `{"id", ..., "transactions": [ {split}, ... ]}`.
 The real fields (type, amount, description, source/destination, tags) are in
 `transactions[0]` for a single-split transaction.
 
+**Fix a mis-imported transaction.** `tx edit` patches only the fields you pass;
+everything else is left untouched. To flip a reversed transfer, swap the ends:
+```bash
+firefly tx edit 75 --from BBVA --to Mediolanum
+firefly tx edit 75 --amount 50.00 --date 2026-06-15
+firefly tx delete 76 --yes        # remove a duplicate
+```
+
 ## Gotchas
 
 - `tx list` with no transactions in range returns `[]`. Empty is not an error;
@@ -126,6 +138,9 @@ The real fields (type, amount, description, source/destination, tags) are in
   default period, which may hide older transactions. Pass an explicit `--since`
   to be sure.
 - `--tags` is a single comma-separated argument: `--tags food,fun`.
+- `tx edit` handles single-split journals only. `tx delete` will not run
+  without `--yes` (there is no interactive prompt); on success it prints
+  `{"deleted": "<id>"}`.
 
 ## Extending
 

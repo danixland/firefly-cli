@@ -1,5 +1,6 @@
 # Copyright (C) 2026 Danilo M. <danix@danix.xyz>  GPL-2.0-only
 from firefly_cli import registry, output
+from firefly_cli.errors import FireflyError
 
 # Inference table keyed by (source_type, destination_type) -> firefly tx type.
 def _infer_type(src_type, dst_type):
@@ -52,6 +53,56 @@ def cmd_add(args, ctx):
     resp = ctx.client.request("POST", "/api/v1/transactions",
                               body={"transactions": [split]})
     output.emit(output.unwrap(resp), human=ctx.human)
+    return 0
+
+def _edit_args(p):
+    p.add_argument("id")
+    p.add_argument("--amount", default=None)
+    p.add_argument("--date", default=None, help="YYYY-MM-DD")
+    p.add_argument("--desc", default=None)
+    p.add_argument("--from", dest="source", default=None, help="source account")
+    p.add_argument("--to", dest="dest", default=None, help="destination account")
+    p.add_argument("--category", default=None)
+    p.add_argument("--tags", default=None, help="comma-separated")
+    p.add_argument("--type", default=None, help="withdrawal|deposit|transfer")
+
+# ponytail: single-split journals only; multi-split edits need transaction_journal_id per row.
+@registry.command("tx edit", help="modify one transaction by id; only the fields you pass change", args=_edit_args)
+def cmd_edit(args, ctx):
+    split = {}
+    if args.amount is not None:
+        split["amount"] = str(args.amount)
+    if args.date is not None:
+        split["date"] = args.date
+    if args.desc is not None:
+        split["description"] = args.desc
+    if args.source is not None:
+        split["source_id"] = ctx.resolver.account(args.source)["id"]
+    if args.dest is not None:
+        split["destination_id"] = ctx.resolver.account(args.dest)["id"]
+    if args.category is not None:
+        split["category_name"] = args.category
+    if args.tags is not None:
+        split["tags"] = [t.strip() for t in args.tags.split(",") if t.strip()]
+    if args.type is not None:
+        split["type"] = args.type
+    if not split:
+        raise FireflyError("tx edit: nothing to change; pass at least one field")
+    resp = ctx.client.request("PUT", f"/api/v1/transactions/{args.id}",
+                              body={"transactions": [split]})
+    output.emit(output.unwrap(resp), human=ctx.human)
+    return 0
+
+def _delete_args(p):
+    p.add_argument("id")
+    p.add_argument("--yes", action="store_true", help="confirm deletion (required)")
+
+@registry.command("tx delete", help="delete one transaction by id (requires --yes)", args=_delete_args)
+def cmd_delete(args, ctx):
+    if not args.yes:
+        raise FireflyError(f"tx delete {args.id}: refusing without --yes")
+    ctx.client.request("DELETE", f"/api/v1/transactions/{args.id}")
+    output.emit({"deleted": args.id}, human=ctx.human)
     return 0
 
 def _list_args(p):

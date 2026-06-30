@@ -8,7 +8,13 @@ No drift: groups, leaves, and per-leaf flags are read straight off the
 argparse subparsers the registry builds.
 """
 import argparse
+import os
+import sys
 from collections import defaultdict
+
+# Run from the repo, not any installed copy: prepend the repo root so
+# `python scripts/gen_completion.py` imports this tree, not a stale install.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from firefly_cli import registry
 import firefly_cli.commands  # noqa: F401  triggers registration

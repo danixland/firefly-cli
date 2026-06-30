@@ -40,6 +40,8 @@ _firefly() {
         "account create")   leaf_opts="--currency --opening-balance --type";;
         "account list")     leaf_opts="--type";;
         "tx add")           leaf_opts="--category --date --desc --from --tags --to --type";;
+        "tx delete")        leaf_opts="--yes";;
+        "tx edit")          leaf_opts="--amount --category --date --desc --from --tags --to --type";;
         "tx list")          leaf_opts="--account --limit --since --until";;
     esac
 
@@ -50,7 +52,7 @@ _firefly() {
         account) leaves="balance create get list";;
         category) leaves="list";;
         tag) leaves="list";;
-        tx) leaves="add get list search";;
+        tx) leaves="add delete edit get list search";;
     esac
 
     if [[ -z $group ]]; then

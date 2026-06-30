@@ -67,6 +67,73 @@ class TestTxAdd(unittest.TestCase):
         self.assertEqual(split["category_name"], "Brand New Cat")
         resolver.category.assert_not_called()
 
+class TestTxEdit(unittest.TestCase):
+    def test_edit_sends_only_provided_fields(self):
+        ctx, client, resolver = make_ctx()
+        client.request.return_value = {"data": {"id": "9", "attributes": {}}}
+        args = MagicMock(id="9", amount="12.00", date=None, desc="fixed",
+                         source=None, dest=None, category=None, tags=None, type=None)
+        rc = tx.cmd_edit(args, ctx)
+        self.assertEqual(rc, 0)
+        method, path = client.request.call_args[0][:2]
+        split = client.request.call_args[1]["body"]["transactions"][0]
+        self.assertEqual((method, path), ("PUT", "/api/v1/transactions/9"))
+        self.assertEqual(split, {"amount": "12.00", "description": "fixed"})
+        resolver.account.assert_not_called()
+
+    def test_edit_resolves_accounts_when_given(self):
+        ctx, client, resolver = make_ctx()
+        resolver.account.side_effect = lambda n: {
+            "BBVA": {"id": "3", "name": "BBVA", "type": "asset"},
+            "Medio": {"id": "4", "name": "Medio", "type": "asset"},
+        }[n]
+        client.request.return_value = {"data": {"id": "9", "attributes": {}}}
+        args = MagicMock(id="9", amount=None, date=None, desc=None,
+                         source="BBVA", dest="Medio", category=None, tags=None, type=None)
+        tx.cmd_edit(args, ctx)
+        split = client.request.call_args[1]["body"]["transactions"][0]
+        self.assertEqual(split, {"source_id": "3", "destination_id": "4"})
+
+    def test_edit_category_raw_and_tags_split(self):
+        ctx, client, resolver = make_ctx()
+        client.request.return_value = {"data": {"id": "9", "attributes": {}}}
+        args = MagicMock(id="9", amount=None, date=None, desc=None, source=None,
+                         dest=None, category="Cat", tags="a, b", type="transfer")
+        tx.cmd_edit(args, ctx)
+        split = client.request.call_args[1]["body"]["transactions"][0]
+        self.assertEqual(split,
+                         {"category_name": "Cat", "tags": ["a", "b"], "type": "transfer"})
+        resolver.category.assert_not_called()
+
+    def test_edit_with_no_fields_errors(self):
+        from firefly_cli.errors import FireflyError
+        ctx, client, _ = make_ctx()
+        args = MagicMock(id="9", amount=None, date=None, desc=None, source=None,
+                         dest=None, category=None, tags=None, type=None)
+        with self.assertRaises(FireflyError):
+            tx.cmd_edit(args, ctx)
+        client.request.assert_not_called()
+
+
+class TestTxDelete(unittest.TestCase):
+    def test_delete_requires_yes(self):
+        from firefly_cli.errors import FireflyError
+        ctx, client, _ = make_ctx()
+        args = MagicMock(id="9", yes=False)
+        with self.assertRaises(FireflyError):
+            tx.cmd_delete(args, ctx)
+        client.request.assert_not_called()
+
+    def test_delete_with_yes(self):
+        ctx, client, _ = make_ctx()
+        client.request.return_value = {}
+        args = MagicMock(id="9", yes=True)
+        rc = tx.cmd_delete(args, ctx)
+        self.assertEqual(rc, 0)
+        method, path = client.request.call_args[0][:2]
+        self.assertEqual((method, path), ("DELETE", "/api/v1/transactions/9"))
+
+
 class TestTxList(unittest.TestCase):
     def test_list_passes_date_params(self):
         ctx, client, _ = make_ctx()
