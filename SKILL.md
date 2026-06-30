@@ -32,11 +32,15 @@ If `firefly` is not on PATH, run from the repo with `python -m firefly_cli ...`
   object. Do not pass `--human` when you intend to parse, it prints tables.
 - **Exit code 0 = success, 1 = error.** On error, `{"error": "..."}` goes to
   stderr. Always check the exit code before trusting output.
-- **You pass names, not IDs.** `--from test01`, `--category Groceries`. The CLI
-  resolves them. An unknown or ambiguous name is a HARD error that lists the
-  candidates and exits 1. When that happens, read the candidates, pick the
-  right one, and retry. NEVER guess an account, a wrong account moves real
-  money.
+- **You pass names, not IDs.** `--from test01`, `--to Groceries`. For
+  **accounts** the CLI resolves the name to an ID; an unknown or ambiguous
+  account is a HARD error that lists the candidates and exits 1. When that
+  happens, read the candidates, pick the right one, and retry. NEVER guess an
+  account, a wrong account moves real money.
+- **Categories and tags auto-create.** `--category NAME` and `--tags a,b` are
+  passed straight to Firefly, which creates the category/tag if it does not
+  exist. No resolution, no error on a new name. Reuse an existing name (see
+  `firefly category list` / `firefly tag list`) to avoid duplicates.
 - **`tx add` infers the transaction type** from the account types: asset to
   expense = withdrawal, revenue to asset = deposit, asset to asset = transfer.
   Override with `--type withdrawal|deposit|transfer` only when inference is
@@ -68,8 +72,9 @@ Global: `--human` (tables, do not use when parsing), `--url`/`--token`
 firefly tx add 42.50 --from test01 --to Groceries --desc "weekly shop" --tags food
 ```
 `test01` is an asset account, `Groceries` an expense account, so this is a
-withdrawal. If `Groceries` does not exist, the CLI errors with the available
-expense accounts; pick one or ask the user before creating a new category.
+withdrawal. `Groceries` here is the destination **expense account** and must
+exist (resolved by name). The `--tags food` and any `--category NAME` are
+auto-created by Firefly if new.
 
 **Record income:**
 ```bash

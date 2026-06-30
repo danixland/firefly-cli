@@ -55,6 +55,18 @@ class TestTxAdd(unittest.TestCase):
         self.assertEqual(split["type"], "transfer")
         self.assertEqual(split["tags"], ["food", "fun"])
 
+    def test_category_passed_raw_not_resolved(self):
+        # Category name goes straight to Firefly (auto-creates); resolver untouched.
+        ctx, client, resolver = make_ctx()
+        resolver.account.side_effect = lambda n: {"id": "1", "type": "asset", "name": n}
+        client.request.return_value = {"data": {"id": "1", "attributes": {}}}
+        args = MagicMock(amount="5", source="A", dest="B", desc=None, date=None,
+                         category="Brand New Cat", tags=None, type="withdrawal")
+        tx.cmd_add(args, ctx)
+        split = client.request.call_args[1]["body"]["transactions"][0]
+        self.assertEqual(split["category_name"], "Brand New Cat")
+        resolver.category.assert_not_called()
+
 class TestTxList(unittest.TestCase):
     def test_list_passes_date_params(self):
         ctx, client, _ = make_ctx()

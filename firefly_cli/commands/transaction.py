@@ -45,7 +45,8 @@ def cmd_add(args, ctx):
         "destination_id": dst["id"],
     }
     if args.category:
-        split["category_name"] = ctx.resolver.category(args.category).get("name", args.category)
+        # Pass name raw; Firefly auto-creates the category if it doesn't exist.
+        split["category_name"] = args.category
     if args.tags:
         split["tags"] = [t.strip() for t in args.tags.split(",") if t.strip()]
     resp = ctx.client.request("POST", "/api/v1/transactions",
