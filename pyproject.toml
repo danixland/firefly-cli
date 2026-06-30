@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "firefly-cli"
+version = "0.1.0"
+description = "CLI tool for agent interaction with Firefly III"
+requires-python = ">=3.11"
+license = { text = "GPL-2.0-only" }
+authors = [{ name = "Danilo M.", email = "danix@danix.xyz" }]
+dependencies = []
+
+[project.scripts]
+firefly = "firefly_cli.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["firefly_cli*"]
