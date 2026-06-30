@@ -30,8 +30,10 @@ No other files change.
 ## Conventions
 - Python 3.11+, standard library only. No third-party runtime deps.
 - Output JSON by default (agent-first); `--human` for tables.
-- Name args resolve to IDs; ambiguous or missing names are HARD errors listing
-  candidates. Never silently guess an account (real money).
+- Account name args resolve to IDs; ambiguous or missing names are HARD errors
+  listing candidates. Never silently guess an account (real money).
+- Categories and tags are NOT resolved: their names pass straight to Firefly,
+  which auto-creates them. Accounts are never auto-created (`account create`).
 - All errors are `firefly_cli.errors.FireflyError` subclasses; `cli.main`
   catches them, prints `{"error": ...}` to stderr, returns exit code 1.
 

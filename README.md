@@ -31,6 +31,8 @@ firefly auth test                verify connectivity and token
 firefly account list [--type T]  list accounts (filter: asset, expense, ...)
 firefly account get <name|id>    show one account
 firefly account balance <name>   show an account balance
+firefly account create <name> --type asset|expense|revenue
+        [--opening-balance N] [--currency CODE]
 
 firefly tx add <amount> --from <acct> --to <acct> [--desc T]
         [--date YYYY-MM-DD] [--category C] [--tags a,b] [--type T]
@@ -49,9 +51,11 @@ The command set grows over time; see `CLAUDE.md` for how to add one.
 - Output is JSON by default. Pass `--human` for aligned tables.
 - Exit code is 0 on success, 1 on any error; errors print as
   `{"error": "..."}` on stderr.
-- Account, category, and tag arguments accept names, which are resolved to IDs.
-  An ambiguous or unknown name is a hard error listing the candidates, never a
-  silent guess.
+- Account arguments accept names, which are resolved to IDs. An ambiguous or
+  unknown account is a hard error listing the candidates, never a silent guess.
+- Categories and tags are not resolved: `tx add --category`/`--tags` pass the
+  names straight to Firefly, which creates them if new. Accounts are never
+  auto-created; use `account create`.
 - `tx add` infers the transaction type from the account types (asset to expense
   is a withdrawal, revenue to asset is a deposit, asset to asset is a transfer).
   Override with `--type`.

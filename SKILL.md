@@ -53,6 +53,8 @@ firefly auth test                          verify connectivity and token
 firefly account list [--type asset|expense|revenue|liability|...]
 firefly account get <name|id>
 firefly account balance <name|id>
+firefly account create <name> --type asset|expense|revenue
+        [--opening-balance N] [--currency CODE]
 firefly tx add <amount> --from <acct> --to <acct>
         [--desc TEXT] [--date YYYY-MM-DD] [--category NAME] [--tags a,b] [--type T]
 firefly tx list [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--account NAME] [--limit N]
@@ -85,6 +87,16 @@ firefly tx add 1800 --from Salary --to test01 --desc "June pay"
 ```bash
 firefly tx add 200 --from test01 --to Savings --type transfer
 ```
+
+**Create an account** (when `tx add` errors that an account does not exist,
+and the user confirms it should be created):
+```bash
+firefly account create Savings --type asset --opening-balance 0
+firefly account create Rent --type expense
+```
+Supports asset, expense, revenue. asset accounts get the default role
+automatically. Unlike categories/tags, accounts are NOT auto-created by
+`tx add`, create them explicitly here first.
 
 **Check a balance:**
 ```bash
