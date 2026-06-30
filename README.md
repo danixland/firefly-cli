@@ -22,8 +22,39 @@ Provide your Firefly III URL and a personal access token in either way:
 
 ## Commands
 
-Run `firefly --help` to see the available command groups and options. The full
-set of commands is still being built out, so expect more to appear over time.
+Run `firefly --help` for the full list. Current commands:
+
+```
+firefly auth set                 write URL and token to the config file
+firefly auth test                verify connectivity and token
+
+firefly account list [--type T]  list accounts (filter: asset, expense, ...)
+firefly account get <name|id>    show one account
+firefly account balance <name>   show an account balance
+
+firefly tx add <amount> --from <acct> --to <acct> [--desc T]
+        [--date YYYY-MM-DD] [--category C] [--tags a,b] [--type T]
+firefly tx list [--since D] [--until D] [--account A] [--limit N]
+firefly tx get <id>              show one transaction
+firefly tx search <query>        search transactions
+
+firefly category list
+firefly tag list
+```
+
+The command set grows over time; see `CLAUDE.md` for how to add one.
+
+## For agents
+
+- Output is JSON by default. Pass `--human` for aligned tables.
+- Exit code is 0 on success, 1 on any error; errors print as
+  `{"error": "..."}` on stderr.
+- Account, category, and tag arguments accept names, which are resolved to IDs.
+  An ambiguous or unknown name is a hard error listing the candidates, never a
+  silent guess.
+- `tx add` infers the transaction type from the account types (asset to expense
+  is a withdrawal, revenue to asset is a deposit, asset to asset is a transfer).
+  Override with `--type`.
 
 ## License
 
