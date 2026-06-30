@@ -50,5 +50,21 @@ No other files change.
 contract, name resolution, task recipes). Keep it in sync when commands change.
 It carries skill frontmatter and is symlinked into the Claude Code skills dir.
 
+## Versioning
+`MAJOR.MINOR.PATCH`, keyed on the tool's *contract*, not the size of the diff.
+The contract is the CLI surface (command/flag names) plus the JSON output and
+exit codes that an agent and SKILL.md depend on.
+- **PATCH**: bug fixes and small enhancements that keep the contract (e.g.
+  better help text, `--human` output tweaks, a new optional flag).
+- **MINOR**: new commands or functionality added without breaking existing
+  callers (e.g. a new `budget` group).
+- **MAJOR**: a breaking change to the contract, renamed/removed command or
+  flag, changed JSON shape or exit codes, regardless of how small the diff is.
+  A large internal refactor that leaves the contract intact is NOT a major.
+
+On every release bump the version in BOTH `pyproject.toml` and
+`firefly_cli/__init__.py` (keep them equal), then create a GPG-signed tag
+`vX.Y.Z` and push with `--follow-tags`.
+
 ## License
 GPLv2-only. Per-file header: `Copyright (C) 2026 Danilo M. <danix@danix.xyz>`.
