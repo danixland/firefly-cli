@@ -75,3 +75,41 @@ class TestOutput(unittest.TestCase):
         tty = TTY()
         emit([tx], human=True, stream=tty)
         self.assertIn("\033[31m", tty.getvalue())    # tty: withdrawal is red
+
+    def _emit(self, row):
+        buf = io.StringIO()
+        emit([row], human=True, stream=buf)
+        return buf.getvalue()
+
+    def test_view_account_shows_balance_drops_plumbing(self):
+        # account_role signature -> the account view.
+        out = self._emit({"id": "6", "name": "BBVA", "type": "asset",
+                          "account_role": "defaultAsset",
+                          "current_balance": "1590.92", "currency_code": "EUR",
+                          "active": True, "iban": "IT68...", "notes": "secret"})
+        self.assertIn("BBVA", out)
+        self.assertIn("1590.92", out)
+        self.assertIn("currency_code", out)
+        self.assertNotIn("iban", out)        # plumbing column dropped
+        self.assertNotIn("secret", out)
+
+    def test_view_tag(self):
+        out = self._emit({"id": "9", "tag": "2026", "description": "yr",
+                          "zoom_level": None, "latitude": None})
+        self.assertIn("2026", out)
+        self.assertIn("description", out)
+        self.assertNotIn("zoom_level", out)
+
+    def test_view_account_balance(self):
+        # The balance handler emits id+name+current_balance (no account_role).
+        out = self._emit({"id": "6", "name": "BBVA",
+                          "current_balance": "1590.92"})
+        self.assertIn("current_balance", out)
+        self.assertIn("1590.92", out)
+
+    def test_view_category_name_only(self):
+        out = self._emit({"id": "2", "name": "Food", "spent": [],
+                          "primary_currency_code": "EUR", "notes": "junk"})
+        self.assertIn("Food", out)
+        self.assertNotIn("primary_currency_code", out)
+        self.assertNotIn("spent", out)
