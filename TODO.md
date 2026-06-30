@@ -27,3 +27,6 @@ bash completion).
 - [ ] `--raw` escape hatch for arbitrary API calls.
 - [ ] OAuth as an alternative to personal access tokens.
 - [ ] zsh / fish completion (bash done).
+
+## UI/UX
+- [ ] completion needs to suggest based on `--type`. EG, `firefly --human account list --type` should suggest available account types.
