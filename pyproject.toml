@@ -3,13 +3,30 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "firefly-cli"
+name = "firefly-iii-agent"
 version = "0.1.0"
 description = "CLI tool for agent interaction with Firefly III"
+readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "GPL-2.0-only" }
 authors = [{ name = "Danilo M.", email = "danix@danix.xyz" }]
+keywords = ["firefly-iii", "cli", "agent", "finance"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Utilities",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://git.danix.xyz/firefly-cli/"
+Repository = "https://git.danix.xyz/firefly-cli/"
 
 [project.scripts]
 firefly = "firefly_cli.cli:main"
