@@ -22,10 +22,24 @@ class TestAccountCmd(unittest.TestCase):
         ctx, client, resolver = make_ctx()
         resolver.account.return_value = {"id": "3", "name": "Checking",
                                          "current_balance": "100.00"}
-        args = MagicMock(account="Checking")
+        args = MagicMock(account="Checking", at=None)
         rc = acct.cmd_balance(args, ctx)
         resolver.account.assert_called_once_with("Checking")
+        client.request.assert_not_called()  # current balance from resolver, no extra call
         self.assertEqual(rc, 0)
+
+    def test_balance_at_date_fetches_dated_account(self):
+        ctx, client, resolver = make_ctx()
+        resolver.account.return_value = {"id": "3", "name": "Checking",
+                                         "current_balance": "100.00"}
+        client.request.return_value = {"data": {"id": "3", "attributes": {
+            "name": "Checking", "current_balance": "42.00"}}}
+        args = MagicMock(account="Checking", at="2026-05-31")
+        rc = acct.cmd_balance(args, ctx)
+        self.assertEqual(rc, 0)
+        method, path = client.request.call_args[0][:2]
+        self.assertEqual((method, path), ("GET", "/api/v1/accounts/3"))
+        self.assertEqual(client.request.call_args[1]["params"], {"date": "2026-05-31"})
 
 class TestAccountCreate(unittest.TestCase):
     def _args(self, **kw):

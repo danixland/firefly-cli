@@ -52,9 +52,22 @@ def cmd_get(args, ctx):
     output.emit(acc, human=ctx.human)
     return 0
 
-@registry.command("account balance", help="show current balance for one account (name or id)", args=_name_arg)
+def _balance_args(p):
+    p.add_argument("account", help="account name or id")
+    p.add_argument("--at", default=None,
+                   help="balance as of this date YYYY-MM-DD (default: current)")
+
+@registry.command("account balance", help="show balance for one account (name or id); --at for a historical date", args=_balance_args)
 def cmd_balance(args, ctx):
     acc = ctx.resolver.account(args.account)
+    if args.at:
+        # Firefly recomputes current_balance as of ?date= on the account show endpoint.
+        dated = output.unwrap(ctx.client.request(
+            "GET", f"/api/v1/accounts/{acc['id']}", params={"date": args.at}))
+        output.emit({"id": acc["id"], "name": dated.get("name") or acc.get("name"),
+                     "date": args.at,
+                     "current_balance": dated.get("current_balance")}, human=ctx.human)
+        return 0
     output.emit({"id": acc["id"], "name": acc.get("name"),
                  "current_balance": acc.get("current_balance")}, human=ctx.human)
     return 0

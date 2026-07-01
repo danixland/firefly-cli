@@ -52,7 +52,7 @@ If `firefly` is not on PATH, run from the repo with `python -m firefly_cli ...`
 firefly auth test                          verify connectivity and token
 firefly account list [--type asset|expense|revenue|liability|...]
 firefly account get <name|id>
-firefly account balance <name|id>
+firefly account balance <name|id> [--at YYYY-MM-DD]
 firefly account create <name> --type asset|expense|revenue
         [--opening-balance N] [--currency CODE]
 firefly tx add <amount> --from <acct> --to <acct>
@@ -105,6 +105,8 @@ automatically. Unlike categories/tags, accounts are NOT auto-created by
 **Check a balance:**
 ```bash
 firefly account balance test01            # -> {"id","name","current_balance"}
+firefly account balance test01 --at 2026-05-31  # historical: balance as of that date
+                                                # -> adds "date"; useful for reconciliation
 ```
 
 **Find recent spending in a window:**

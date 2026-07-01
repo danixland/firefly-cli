@@ -37,6 +37,7 @@ _firefly() {
     local leaf_opts=""
     case "$group $leaf" in
         "auth set")         leaf_opts="--token --url";;
+        "account balance")  leaf_opts="--at";;
         "account create")   leaf_opts="--currency --opening-balance --type";;
         "account list")     leaf_opts="--type";;
         "tx add")           leaf_opts="--category --date --desc --from --tags --to --type";;
