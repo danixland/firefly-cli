@@ -56,6 +56,20 @@ _firefly() {
         tx) leaves="add delete edit get list search";;
     esac
 
+    # Flag values: when the previous word is a flag with a fixed value set for
+    # this command, suggest those values instead of more flags.
+    local vals=""
+    case "$group $leaf $prev" in
+        "account create --type")  vals="asset expense revenue";;
+        "account list --type")    vals="asset expense revenue liability";;
+        "tx add --type")          vals="withdrawal deposit transfer";;
+        "tx edit --type")         vals="withdrawal deposit transfer";;
+    esac
+    if [[ -n $vals ]]; then
+        COMPREPLY=($(compgen -W "$vals" -- "$cur"))
+        return
+    fi
+
     if [[ -z $group ]]; then
         COMPREPLY=($(compgen -W "$groups $global_opts" -- "$cur"))
     elif [[ -z $leaf ]]; then

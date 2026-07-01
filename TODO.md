@@ -29,4 +29,6 @@ bash completion).
 - [ ] zsh / fish completion (bash done).
 
 ## UI/UX
-- [ ] completion needs to suggest based on `--type`. EG, `firefly --human account list --type` should suggest available account types.
+- [x] completion suggests values for `--type` (account: asset/expense/revenue
+      /liability, tx: withdrawal/deposit/transfer), keyed per command. Static
+      enum, no API call. See `FLAG_VALUES` in `scripts/gen_completion.py`.

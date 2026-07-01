@@ -21,6 +21,16 @@ import firefly_cli.commands  # noqa: F401  triggers registration
 
 GROUP_ORDER = ["auth", "account", "category", "tag", "tx"]
 
+# Static value suggestions for flags whose choices are a fixed enum, keyed on
+# "<group leaf>" then flag. Account/transaction types are fixed in Firefly, so
+# no API call is needed (a completion must not hit the network).
+FLAG_VALUES = {
+    "account list": {"--type": "asset expense revenue liability"},
+    "account create": {"--type": "asset expense revenue"},
+    "tx add": {"--type": "withdrawal deposit transfer"},
+    "tx edit": {"--type": "withdrawal deposit transfer"},
+}
+
 
 def collect():
     groups = defaultdict(dict)  # group -> {leaf: [--flag, ...]}
@@ -51,10 +61,19 @@ def render(groups):
                 leaf_cases.append(
                     f'        "{g} {leaf}")'.ljust(28) + f'leaf_opts="{flags}";;')
 
+    # Per-command flag-value cases: "<group leaf> <flag>") vals="..."
+    value_cases = []
+    for cmd in sorted(FLAG_VALUES):
+        for flag in sorted(FLAG_VALUES[cmd]):
+            vals = FLAG_VALUES[cmd][flag]
+            value_cases.append(f'        "{cmd} {flag}")'.ljust(34)
+                               + f'vals="{vals}";;')
+
     return TEMPLATE.format(
         groups=" ".join(order),
         leaf_cases="\n".join(leaf_cases),
         group_cases="\n".join(group_cases),
+        value_cases="\n".join(value_cases),
     )
 
 
@@ -104,6 +123,17 @@ _firefly() {{
     case "$group" in
 {group_cases}
     esac
+
+    # Flag values: when the previous word is a flag with a fixed value set for
+    # this command, suggest those values instead of more flags.
+    local vals=""
+    case "$group $leaf $prev" in
+{value_cases}
+    esac
+    if [[ -n $vals ]]; then
+        COMPREPLY=($(compgen -W "$vals" -- "$cur"))
+        return
+    fi
 
     if [[ -z $group ]]; then
         COMPREPLY=($(compgen -W "$groups $global_opts" -- "$cur"))
