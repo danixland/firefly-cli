@@ -139,9 +139,55 @@ class TestTxList(unittest.TestCase):
         ctx, client, _ = make_ctx()
         client.request.return_value = {"data": []}
         args = MagicMock(since="2026-06-01", until="2026-06-30",
-                         account=None, limit=10)
+                         account=None, limit=10, all=False)
         tx.cmd_list(args, ctx)
         params = client.request.call_args[1]["params"]
         self.assertEqual(params["start"], "2026-06-01")
         self.assertEqual(params["end"], "2026-06-30")
         self.assertEqual(params["limit"], 10)
+
+    def test_list_warns_when_truncated(self):
+        import io
+        from contextlib import redirect_stderr
+        ctx, client, _ = make_ctx()
+        client.request.return_value = {
+            "data": [{"id": str(i)} for i in range(20)],
+            "meta": {"pagination": {"total": 90, "count": 20,
+                                    "current_page": 1, "total_pages": 5}},
+        }
+        args = MagicMock(since=None, until=None, account=None, limit=20, all=False)
+        buf = io.StringIO()
+        with redirect_stderr(buf):
+            tx.cmd_list(args, ctx)
+        self.assertIn("showing 20 of 90", buf.getvalue())
+        self.assertEqual(client.request.call_count, 1)
+
+    def test_list_no_warn_when_complete(self):
+        import io
+        from contextlib import redirect_stderr
+        ctx, client, _ = make_ctx()
+        client.request.return_value = {
+            "data": [{"id": "1"}],
+            "meta": {"pagination": {"total": 1, "count": 1,
+                                    "current_page": 1, "total_pages": 1}},
+        }
+        args = MagicMock(since=None, until=None, account=None, limit=20, all=False)
+        buf = io.StringIO()
+        with redirect_stderr(buf):
+            tx.cmd_list(args, ctx)
+        self.assertEqual(buf.getvalue(), "")
+
+    def test_list_all_paginates(self):
+        ctx, client, _ = make_ctx()
+        def page(method, path, params=None, body=None):
+            p = params["page"]
+            return {
+                "data": [{"id": f"{p}-{i}"} for i in range(2)],
+                "meta": {"pagination": {"total": 4, "count": 2,
+                                        "current_page": p, "total_pages": 2}},
+            }
+        client.request.side_effect = page
+        args = MagicMock(since=None, until=None, account=None, limit=2, all=True)
+        rc = tx.cmd_list(args, ctx)
+        self.assertEqual(rc, 0)
+        self.assertEqual(client.request.call_count, 2)

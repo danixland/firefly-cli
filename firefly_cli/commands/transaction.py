@@ -110,6 +110,8 @@ def _list_args(p):
     p.add_argument("--until", default=None, help="end date YYYY-MM-DD")
     p.add_argument("--account", default=None, help="filter by account name")
     p.add_argument("--limit", type=int, default=20)
+    p.add_argument("--all", action="store_true",
+                   help="fetch every page (ignores --limit truncation)")
 
 @registry.command("tx list", help="list recent transactions (newest first)", args=_list_args)
 def cmd_list(args, ctx):
@@ -123,7 +125,25 @@ def cmd_list(args, ctx):
         params["start"] = args.since
     if args.until:
         params["end"] = args.until
+
+    if args.all:
+        rows, page = [], 1
+        while True:
+            resp = ctx.client.request("GET", path, params={**params, "page": page})
+            rows.extend(output.unwrap(resp))
+            pg = (resp.get("meta") or {}).get("pagination") or {}
+            if page >= (pg.get("total_pages") or 1):
+                break
+            page += 1
+        output.emit(rows, human=ctx.human)
+        return 0
+
     resp = ctx.client.request("GET", path, params=params)
+    pg = (resp.get("meta") or {}).get("pagination") or {}
+    total, count = pg.get("total"), pg.get("count")
+    if total is not None and count is not None and count < total:
+        import sys
+        print(f"showing {count} of {total} (use --all for all)", file=sys.stderr)
     output.emit(output.unwrap(resp), human=ctx.human)
     return 0
 

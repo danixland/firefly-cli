@@ -61,7 +61,7 @@ firefly tx edit <id>
         [--amount N] [--date YYYY-MM-DD] [--desc TEXT] [--from <acct>] [--to <acct>]
         [--category NAME] [--tags a,b] [--type T]   # only fields passed are changed
 firefly tx delete <id> --yes                        # --yes required, no prompt
-firefly tx list [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--account NAME] [--limit N]
+firefly tx list [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--account NAME] [--limit N] [--all]
 firefly tx get <id>
 firefly tx search <query>
 firefly category list
@@ -132,6 +132,10 @@ firefly tx delete 76 --yes        # remove a duplicate
 
 - `tx list` with no transactions in range returns `[]`. Empty is not an error;
   it means no matches, not a failure.
+- `tx list` returns at most `--limit` rows (default 20). When more match, it
+  prints `showing N of M (use --all for all)` to **stderr** (stdout JSON stays
+  clean). Pass `--all` to auto-paginate every page. Critical for reconciliation:
+  a truncated list makes a correct ledger look wrong.
 - Amounts are strings in responses, often with trailing zeros
   (`"0.010000000000"`). Compare numerically, do not string-match.
 - Dates in `tx list` filter by transaction date; omit them to use Firefly's

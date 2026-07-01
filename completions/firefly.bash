@@ -42,7 +42,7 @@ _firefly() {
         "tx add")           leaf_opts="--category --date --desc --from --tags --to --type";;
         "tx delete")        leaf_opts="--yes";;
         "tx edit")          leaf_opts="--amount --category --date --desc --from --tags --to --type";;
-        "tx list")          leaf_opts="--account --limit --since --until";;
+        "tx list")          leaf_opts="--account --all --limit --since --until";;
     esac
 
     # Leaves per group.
