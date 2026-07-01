@@ -40,7 +40,7 @@ _firefly() {
         "account balance")  leaf_opts="--at";;
         "account create")   leaf_opts="--currency --opening-balance --type";;
         "account list")     leaf_opts="--type";;
-        "tx add")           leaf_opts="--category --date --desc --from --tags --to --type";;
+        "tx add")           leaf_opts="--category --date --desc --dry-run --from --tags --to --type";;
         "tx delete")        leaf_opts="--yes";;
         "tx edit")          leaf_opts="--amount --category --date --desc --from --tags --to --type";;
         "tx list")          leaf_opts="--account --all --limit --since --until";;

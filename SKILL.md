@@ -56,7 +56,7 @@ firefly account balance <name|id> [--at YYYY-MM-DD]
 firefly account create <name> --type asset|expense|revenue
         [--opening-balance N] [--currency CODE]
 firefly tx add <amount> --from <acct> --to <acct>
-        [--desc TEXT] [--date YYYY-MM-DD] [--category NAME] [--tags a,b] [--type T]
+        [--desc TEXT] [--date YYYY-MM-DD] [--category NAME] [--tags a,b] [--type T] [--dry-run]
 firefly tx edit <id>
         [--amount N] [--date YYYY-MM-DD] [--desc TEXT] [--from <acct>] [--to <acct>]
         [--category NAME] [--tags a,b] [--type T]   # only fields passed are changed
@@ -101,6 +101,14 @@ firefly account create Rent --type expense
 Supports asset, expense, revenue. asset accounts get the default role
 automatically. Unlike categories/tags, accounts are NOT auto-created by
 `tx add`, create them explicitly here first.
+
+**Validate a batch before writing any of it:** when importing many rows in a
+loop, a mid-batch failure (a `--to` account that doesn't exist yet) leaves the
+earlier rows already written. Dry-run each row first so the whole batch fails
+fast: `tx add ... --dry-run` resolves `--from`/`--to` and infers the type but
+sends nothing, printing `{"dry_run": true, "would_send": {...}}`. A missing
+account is still a hard error (exit 1). Recipe: dry-run every row, create any
+accounts the errors name, then run the batch for real.
 
 **Check a balance:**
 ```bash

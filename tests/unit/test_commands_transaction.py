@@ -19,7 +19,7 @@ class TestTxAdd(unittest.TestCase):
                                                 "attributes": {}}}
         args = MagicMock(amount="42.50", source="Checking", dest="Groceries",
                          desc="food", date="2026-06-30", category=None,
-                         tags=None, type=None)
+                         tags=None, type=None, dry_run=False)
         rc = tx.cmd_add(args, ctx)
         self.assertEqual(rc, 0)
         method, path = client.request.call_args[0][:2]
@@ -39,7 +39,8 @@ class TestTxAdd(unittest.TestCase):
         }[n]
         client.request.return_value = {"data": {"id": "1", "attributes": {}}}
         args = MagicMock(amount="1000", source="Salary", dest="Checking",
-                         desc="pay", date=None, category=None, tags=None, type=None)
+                         desc="pay", date=None, category=None, tags=None,
+                         type=None, dry_run=False)
         tx.cmd_add(args, ctx)
         self.assertEqual(client.request.call_args[1]["body"]["transactions"][0]["type"],
                          "deposit")
@@ -49,7 +50,8 @@ class TestTxAdd(unittest.TestCase):
         resolver.account.side_effect = lambda n: {"id": "1", "type": "asset", "name": n}
         client.request.return_value = {"data": {"id": "1", "attributes": {}}}
         args = MagicMock(amount="5", source="A", dest="B", desc=None, date=None,
-                         category=None, tags="food,fun", type="transfer")
+                         category=None, tags="food,fun", type="transfer",
+                         dry_run=False)
         tx.cmd_add(args, ctx)
         split = client.request.call_args[1]["body"]["transactions"][0]
         self.assertEqual(split["type"], "transfer")
@@ -61,10 +63,31 @@ class TestTxAdd(unittest.TestCase):
         resolver.account.side_effect = lambda n: {"id": "1", "type": "asset", "name": n}
         client.request.return_value = {"data": {"id": "1", "attributes": {}}}
         args = MagicMock(amount="5", source="A", dest="B", desc=None, date=None,
-                         category="Brand New Cat", tags=None, type="withdrawal")
+                         category="Brand New Cat", tags=None, type="withdrawal",
+                         dry_run=False)
         tx.cmd_add(args, ctx)
         split = client.request.call_args[1]["body"]["transactions"][0]
         self.assertEqual(split["category_name"], "Brand New Cat")
+
+    def test_dry_run_resolves_but_does_not_post(self):
+        ctx, client, resolver = make_ctx()
+        resolver.account.side_effect = lambda n: {"id": "1", "type": "asset", "name": n}
+        args = MagicMock(amount="5", source="A", dest="B", desc="x", date="2026-06-01",
+                         category=None, tags=None, type="withdrawal", dry_run=True)
+        rc = tx.cmd_add(args, ctx)
+        self.assertEqual(rc, 0)
+        client.request.assert_not_called()  # accounts resolved, nothing written
+        self.assertEqual(resolver.account.call_count, 2)
+
+    def test_dry_run_missing_account_is_hard_error(self):
+        from firefly_cli.errors import ResolutionError
+        ctx, client, resolver = make_ctx()
+        resolver.account.side_effect = ResolutionError('No account named "B"')
+        args = MagicMock(amount="5", source="A", dest="B", desc=None, date=None,
+                         category=None, tags=None, type="withdrawal", dry_run=True)
+        with self.assertRaises(ResolutionError):
+            tx.cmd_add(args, ctx)
+        client.request.assert_not_called()
         resolver.category.assert_not_called()
 
 class TestTxEdit(unittest.TestCase):

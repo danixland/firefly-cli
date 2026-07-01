@@ -30,6 +30,8 @@ def _add_args(p):
     p.add_argument("--tags", default=None, help="comma-separated")
     p.add_argument("--type", default=None,
                    help="withdrawal|deposit|transfer (overrides inference)")
+    p.add_argument("--dry-run", dest="dry_run", action="store_true",
+                   help="resolve accounts and show what would be sent; write nothing")
 
 @registry.command("tx add", help="record a transaction; source/destination resolve to accounts, category/tags auto-create", args=_add_args)
 def cmd_add(args, ctx):
@@ -50,6 +52,10 @@ def cmd_add(args, ctx):
         split["category_name"] = args.category
     if args.tags:
         split["tags"] = [t.strip() for t in args.tags.split(",") if t.strip()]
+    if args.dry_run:
+        # Accounts already resolved above (missing name = hard error). Write nothing.
+        output.emit({"dry_run": True, "would_send": split}, human=ctx.human)
+        return 0
     resp = ctx.client.request("POST", "/api/v1/transactions",
                               body={"transactions": [split]})
     output.emit(output.unwrap(resp), human=ctx.human)
