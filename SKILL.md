@@ -92,6 +92,10 @@ firefly tx add 1800 --from Salary --to test01 --desc "June pay"
 ```bash
 firefly tx add 200 --from test01 --to Savings --type transfer
 ```
+For a transfer, `tx add` echoes `transfer: <from> → <to>, <amount>` to stderr
+before writing (also in `--dry-run`) so a swapped `--from`/`--to` is caught
+before it silently drifts balances by 2x the amount. stdout JSON is unchanged;
+the hint is on stderr only.
 
 **Create an account** (when `tx add` errors that an account does not exist,
 and the user confirms it should be created):

@@ -54,6 +54,13 @@ def cmd_add(args, ctx):
         split["category_name"] = args.category
     if args.tags:
         split["tags"] = [t.strip() for t in args.tags.split(",") if t.strip()]
+    if ttype == "transfer":
+        # Transfer direction is easy to reverse silently (ISSUES.md #5); echo it
+        # to stderr so the user/agent can catch a swapped --from/--to. stdout
+        # JSON unchanged; shown for both real writes and --dry-run.
+        import sys
+        print(f'transfer: {src["name"]} → {dst["name"]}, {split["amount"]}',
+              file=sys.stderr)
     if args.dry_run:
         # Accounts already resolved above (missing name = hard error). Write nothing.
         # dry-run wins over skip-dupes: caller wants a preview, not a write.

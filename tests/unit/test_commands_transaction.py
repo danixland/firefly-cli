@@ -134,6 +134,54 @@ class TestTxAdd(unittest.TestCase):
         self.assertEqual(client.request.call_args[0][:2],
                          ("POST", "/api/v1/transactions"))
 
+    def test_transfer_prints_direction_hint_to_stderr(self):
+        import io
+        from contextlib import redirect_stderr
+        ctx, client, resolver = make_ctx()
+        resolver.account.side_effect = lambda n: {
+            "BBVA": {"id": "3", "name": "BBVA", "type": "asset"},
+            "Medio": {"id": "4", "name": "Medio", "type": "asset"},
+        }[n]
+        client.request.return_value = {"data": {"id": "1", "attributes": {}}}
+        args = MagicMock(amount="100", source="BBVA", dest="Medio", desc=None,
+                         date=None, category=None, tags=None, type=None,
+                         dry_run=False, skip_dupes=False)
+        buf = io.StringIO()
+        with redirect_stderr(buf):
+            tx.cmd_add(args, ctx)
+        self.assertIn("transfer: BBVA → Medio, 100", buf.getvalue())
+
+    def test_transfer_hint_shown_in_dry_run(self):
+        import io
+        from contextlib import redirect_stderr
+        ctx, client, resolver = make_ctx()
+        resolver.account.side_effect = lambda n: {"id": "1", "type": "asset", "name": n}
+        args = MagicMock(amount="5", source="A", dest="B", desc=None, date=None,
+                         category=None, tags=None, type="transfer",
+                         dry_run=True, skip_dupes=False)
+        buf = io.StringIO()
+        with redirect_stderr(buf):
+            tx.cmd_add(args, ctx)
+        self.assertIn("transfer: A → B, 5", buf.getvalue())
+        client.request.assert_not_called()
+
+    def test_withdrawal_no_direction_hint(self):
+        import io
+        from contextlib import redirect_stderr
+        ctx, client, resolver = make_ctx()
+        resolver.account.side_effect = lambda n: {
+            "Checking": {"id": "1", "name": "Checking", "type": "asset"},
+            "Groceries": {"id": "2", "name": "Groceries", "type": "expense"},
+        }[n]
+        client.request.return_value = {"data": {"id": "1", "attributes": {}}}
+        args = MagicMock(amount="5", source="Checking", dest="Groceries", desc=None,
+                         date=None, category=None, tags=None, type=None,
+                         dry_run=False, skip_dupes=False)
+        buf = io.StringIO()
+        with redirect_stderr(buf):
+            tx.cmd_add(args, ctx)
+        self.assertNotIn("transfer:", buf.getvalue())
+
     def test_dry_run_beats_skip_dupes_no_search(self):
         ctx, client, resolver = make_ctx()
         resolver.account.side_effect = lambda n: {"id": "1", "type": "asset", "name": n}
