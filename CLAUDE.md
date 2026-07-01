@@ -7,6 +7,12 @@ instance over its REST API. Python package, command `firefly`.
 The Firefly III source is cloned at `../GITHUB/firefly-iii/` for reference only
 (API shapes, transformers, route definitions). NEVER write to it.
 
+Keep it checked out to the tag matching the *running* Firefly instance, not
+latest master: API shapes drift between versions and a mismatch means checking
+against code the instance doesn't have. After upgrading the instance, refresh
+manually: `git -C ../GITHUB/firefly-iii fetch --tags && git -C ../GITHUB/firefly-iii checkout v<running-version>`.
+Do not auto-pull on session start (a newer master can be wrong for this instance).
+
 ## Architecture
 - `firefly_cli/` package. Shared primitives: `config.py` (env over TOML file),
   `client.py` (HTTP + auth + error surfacing), `errors.py` (FireflyError
