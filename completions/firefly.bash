@@ -38,12 +38,12 @@ _firefly() {
     case "$group $leaf" in
         "auth set")         leaf_opts="--token --url";;
         "account balance")  leaf_opts="--at";;
-        "account create")   leaf_opts="--currency --opening-balance --type";;
+        "account create")   leaf_opts="--currency --if-not-exists --opening-balance --type";;
         "account list")     leaf_opts="--type";;
         "tx add")           leaf_opts="--category --date --desc --dry-run --from --skip-dupes --tags --to --type";;
         "tx delete")        leaf_opts="--yes";;
         "tx edit")          leaf_opts="--amount --category --date --desc --from --tags --to --type";;
-        "tx list")          leaf_opts="--account --all --limit --since --until";;
+        "tx list")          leaf_opts="--account --all --flat --limit --since --until";;
     esac
 
     # Leaves per group.

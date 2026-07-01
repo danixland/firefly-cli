@@ -105,7 +105,10 @@ firefly account create Rent --type expense
 ```
 Supports asset, expense, revenue. asset accounts get the default role
 automatically. Unlike categories/tags, accounts are NOT auto-created by
-`tx add`, create them explicitly here first.
+`tx add`, create them explicitly here first. For idempotent import scripts add
+`--if-not-exists`: if an account with that name already exists it returns that
+account's JSON with `"existed": true` (exit 0) instead of erroring on the name
+clash, so a re-run is safe.
 
 **Validate a batch before writing any of it:** when importing many rows in a
 loop, a mid-batch failure (a `--to` account that doesn't exist yet) leaves the
@@ -136,6 +139,19 @@ firefly account balance test01 --at 2026-05-31  # historical: balance as of that
 ```bash
 firefly tx list --account test01 --since 2026-06-01 --until 2026-06-30
 ```
+`--since`/`--until` filter on the transaction date (the date set on the tx),
+inclusive on both ends. Firefly journals have a single date field, so this is
+the value date used for reconciliation; there is no separate book/entry date.
+
+**Flatten output for scripting.** `tx list` nests each journal's splits under
+`transactions[]` even for the single-split common case. Add `--flat` to get one
+top-level object per split (the journal `id` repeated), with the split fields
+(`amount`, `source_name`, `destination_name`, `category_name`, ...) at the top
+level and no `transactions[]` key:
+```bash
+firefly tx list --account test01 --flat
+```
+`--flat` affects JSON only; `--human` already renders one row per split.
 
 **Look up a transaction by id** (ids come from `tx add`/`tx list` output):
 ```bash

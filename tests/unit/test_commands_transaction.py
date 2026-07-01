@@ -264,7 +264,7 @@ class TestTxList(unittest.TestCase):
         ctx, client, _ = make_ctx()
         client.request.return_value = {"data": []}
         args = MagicMock(since="2026-06-01", until="2026-06-30",
-                         account=None, limit=10, all=False)
+                         account=None, limit=10, all=False, flat=False)
         tx.cmd_list(args, ctx)
         params = client.request.call_args[1]["params"]
         self.assertEqual(params["start"], "2026-06-01")
@@ -280,7 +280,7 @@ class TestTxList(unittest.TestCase):
             "meta": {"pagination": {"total": 90, "count": 20,
                                     "current_page": 1, "total_pages": 5}},
         }
-        args = MagicMock(since=None, until=None, account=None, limit=20, all=False)
+        args = MagicMock(since=None, until=None, account=None, limit=20, all=False, flat=False)
         buf = io.StringIO()
         with redirect_stderr(buf):
             tx.cmd_list(args, ctx)
@@ -296,11 +296,48 @@ class TestTxList(unittest.TestCase):
             "meta": {"pagination": {"total": 1, "count": 1,
                                     "current_page": 1, "total_pages": 1}},
         }
-        args = MagicMock(since=None, until=None, account=None, limit=20, all=False)
+        args = MagicMock(since=None, until=None, account=None, limit=20, all=False, flat=False)
         buf = io.StringIO()
         with redirect_stderr(buf):
             tx.cmd_list(args, ctx)
         self.assertEqual(buf.getvalue(), "")
+
+    def test_list_flat_explodes_splits_json(self):
+        import io, json
+        from contextlib import redirect_stdout
+        ctx, client, _ = make_ctx()
+        client.request.return_value = {
+            "data": [{"id": "7", "type": "transactions", "attributes": {
+                "transactions": [{"amount": "5", "source_name": "A"}]}}],
+            "meta": {"pagination": {"total": 1, "count": 1, "total_pages": 1}},
+        }
+        args = MagicMock(since=None, until=None, account=None, limit=20,
+                         all=False, flat=True)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            tx.cmd_list(args, ctx)
+        out = json.loads(buf.getvalue())
+        self.assertEqual(out, [{"amount": "5", "source_name": "A", "id": "7"}])
+
+    def test_list_flat_skipped_for_human(self):
+        # --human path must keep nested rows so the table renderer explodes them.
+        import io
+        from contextlib import redirect_stdout
+        ctx, client, _ = make_ctx()
+        ctx = Context(client=client, resolver=ctx.resolver, human=True)
+        client.request.return_value = {
+            "data": [{"id": "7", "attributes": {
+                "transactions": [{"amount": "5", "source_name": "A",
+                                  "destination_name": "B", "type": "withdrawal"}]}}],
+            "meta": {"pagination": {"total": 1, "count": 1, "total_pages": 1}},
+        }
+        args = MagicMock(since=None, until=None, account=None, limit=20,
+                         all=False, flat=True)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            tx.cmd_list(args, ctx)
+        # human table shows the exploded split value; not raw JSON
+        self.assertIn("5", buf.getvalue())
 
     def test_list_all_paginates(self):
         ctx, client, _ = make_ctx()
@@ -312,7 +349,7 @@ class TestTxList(unittest.TestCase):
                                         "current_page": p, "total_pages": 2}},
             }
         client.request.side_effect = page
-        args = MagicMock(since=None, until=None, account=None, limit=2, all=True)
+        args = MagicMock(since=None, until=None, account=None, limit=2, all=True, flat=False)
         rc = tx.cmd_list(args, ctx)
         self.assertEqual(rc, 0)
         self.assertEqual(client.request.call_count, 2)

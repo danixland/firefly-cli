@@ -62,6 +62,27 @@ def _tx_rows(rows):
 def _is_tx(rows):
     return bool(rows) and isinstance(rows[0], dict) and "transactions" in rows[0]
 
+def flatten_tx(rows):
+    """Explode unwrapped tx journals into one flat object per split.
+
+    Each journal is {id, transactions: [split, ...], ...}. We emit one object
+    per split: the split's raw Firefly fields (source_name, amount, etc.) with
+    the journal id merged in and the `transactions` list dropped. Single-split
+    journals (the common case) become one clean object. Rows without a
+    `transactions` list pass through unchanged.
+    """
+    out = []
+    for r in rows:
+        splits = r.get("transactions")
+        if not isinstance(splits, list):
+            out.append(r)
+            continue
+        for s in splits:
+            flat = dict(s)
+            flat["id"] = r.get("id")
+            out.append(flat)
+    return out
+
 # Per-resource column whitelists for --human. Firefly returns ~50 fields per
 # row; only a handful are worth a table. A row is matched by a signature key.
 # (signature, columns) -- first match wins; unmatched rows use a generic table.

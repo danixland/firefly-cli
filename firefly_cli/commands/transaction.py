@@ -139,6 +139,8 @@ def _list_args(p):
     p.add_argument("--limit", type=int, default=20)
     p.add_argument("--all", action="store_true",
                    help="fetch every page (ignores --limit truncation)")
+    p.add_argument("--flat", action="store_true",
+                   help="one flat object per split; drop the transactions[] nesting (JSON only)")
 
 @registry.command("tx list", help="list recent transactions (newest first)", args=_list_args)
 def cmd_list(args, ctx):
@@ -162,7 +164,7 @@ def cmd_list(args, ctx):
             if page >= (pg.get("total_pages") or 1):
                 break
             page += 1
-        output.emit(rows, human=ctx.human)
+        output.emit(_maybe_flat(rows, args, ctx), human=ctx.human)
         return 0
 
     resp = ctx.client.request("GET", path, params=params)
@@ -171,8 +173,15 @@ def cmd_list(args, ctx):
     if total is not None and count is not None and count < total:
         import sys
         print(f"showing {count} of {total} (use --all for all)", file=sys.stderr)
-    output.emit(output.unwrap(resp), human=ctx.human)
+    output.emit(_maybe_flat(output.unwrap(resp), args, ctx), human=ctx.human)
     return 0
+
+# --flat is a JSON-only convenience; --human already explodes splits into a
+# table, so leave its nested rows alone.
+def _maybe_flat(rows, args, ctx):
+    if getattr(args, "flat", False) and not ctx.human:
+        return output.flatten_tx(rows)
+    return rows
 
 def _id_arg(p):
     p.add_argument("id")

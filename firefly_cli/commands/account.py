@@ -23,6 +23,8 @@ def _create_args(p):
     p.add_argument("--opening-balance", dest="opening_balance", default=None,
                    help="initial balance (asset accounts); dated today")
     p.add_argument("--currency", default=None, help="currency code, e.g. EUR")
+    p.add_argument("--if-not-exists", dest="if_not_exists", action="store_true",
+                   help="if an account with this name exists, return it (existed:true) instead of erroring")
 
 @registry.command("account create", help="create an asset, expense, or revenue account", args=_create_args)
 def cmd_create(args, ctx):
@@ -30,6 +32,17 @@ def cmd_create(args, ctx):
         raise FireflyError(
             f'Unsupported account type "{args.type}". '
             f'Use one of: {", ".join(_CREATE_TYPES)}.')
+    if getattr(args, "if_not_exists", False):
+        # Resolve by name to detect existence; avoids parsing Firefly's 422
+        # "name already in use" error string. Missing = ResolutionError -> create.
+        from firefly_cli.errors import ResolutionError
+        try:
+            existing = ctx.resolver.account(args.name)
+        except ResolutionError:
+            existing = None
+        if existing is not None:
+            output.emit({**existing, "existed": True}, human=ctx.human)
+            return 0
     body = {"name": args.name, "type": args.type}
     if args.type == "asset":
         body["account_role"] = "defaultAsset"

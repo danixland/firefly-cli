@@ -43,7 +43,8 @@ class TestAccountCmd(unittest.TestCase):
 
 class TestAccountCreate(unittest.TestCase):
     def _args(self, **kw):
-        base = dict(name=None, type=None, opening_balance=None, currency=None)
+        base = dict(name=None, type=None, opening_balance=None, currency=None,
+                    if_not_exists=False)
         base.update(kw)
         m = MagicMock()
         m.configure_mock(**base)  # 'name' is reserved in MagicMock ctor, not configure_mock
@@ -89,3 +90,36 @@ class TestAccountCreate(unittest.TestCase):
         with self.assertRaises(FireflyError):
             acct.cmd_create(self._args(name="X", type="bogus"), ctx)
         client.request.assert_not_called()
+
+    def test_if_not_exists_returns_existing_no_post(self):
+        ctx, client, resolver = make_ctx()
+        resolver.account.return_value = {"id": "5", "name": "Savings",
+                                         "type": "asset"}
+        rc = acct.cmd_create(
+            self._args(name="Savings", type="asset", if_not_exists=True), ctx)
+        self.assertEqual(rc, 0)
+        resolver.account.assert_called_once_with("Savings")
+        client.request.assert_not_called()  # existed -> no create
+
+    def test_if_not_exists_creates_when_missing(self):
+        from firefly_cli.errors import ResolutionError
+        ctx, client, resolver = make_ctx()
+        resolver.account.side_effect = ResolutionError('No account named "Savings"')
+        client.request.return_value = {"data": {"id": "9", "attributes": {}}}
+        rc = acct.cmd_create(
+            self._args(name="Savings", type="asset", if_not_exists=True), ctx)
+        self.assertEqual(rc, 0)
+        method, path = client.request.call_args[0][:2]
+        self.assertEqual((method, path), ("POST", "/api/v1/accounts"))
+
+    def test_if_not_exists_emits_existed_flag(self):
+        import io, json
+        from contextlib import redirect_stdout
+        ctx, client, resolver = make_ctx()
+        resolver.account.return_value = {"id": "5", "name": "Savings"}
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            acct.cmd_create(
+                self._args(name="Savings", type="asset", if_not_exists=True), ctx)
+        self.assertEqual(json.loads(buf.getvalue()),
+                         {"id": "5", "name": "Savings", "existed": True})

@@ -1,6 +1,6 @@
 import io, json, unittest
 from contextlib import redirect_stdout
-from firefly_cli.output import unwrap, emit
+from firefly_cli.output import unwrap, emit, flatten_tx
 
 class TestOutput(unittest.TestCase):
     def test_unwrap_list_returns_clean_objects(self):
@@ -21,6 +21,29 @@ class TestOutput(unittest.TestCase):
         with redirect_stdout(buf):
             emit([{"id": "1", "name": "x"}], human=False)
         self.assertEqual(json.loads(buf.getvalue()), [{"id": "1", "name": "x"}])
+
+    def test_flatten_single_split(self):
+        rows = [{"id": "10", "group_title": None, "transactions": [
+            {"amount": "5.00", "source_name": "A", "destination_name": "B",
+             "type": "withdrawal"}]}]
+        flat = flatten_tx(rows)
+        self.assertEqual(len(flat), 1)
+        self.assertNotIn("transactions", flat[0])
+        self.assertEqual(flat[0]["id"], "10")
+        self.assertEqual(flat[0]["amount"], "5.00")
+        self.assertEqual(flat[0]["source_name"], "A")
+
+    def test_flatten_multi_split_repeats_id(self):
+        rows = [{"id": "20", "transactions": [
+            {"amount": "1", "type": "withdrawal"},
+            {"amount": "2", "type": "withdrawal"}]}]
+        flat = flatten_tx(rows)
+        self.assertEqual([f["id"] for f in flat], ["20", "20"])
+        self.assertEqual([f["amount"] for f in flat], ["1", "2"])
+
+    def test_flatten_passes_through_non_tx_rows(self):
+        rows = [{"id": "1", "name": "Checking"}]
+        self.assertEqual(flatten_tx(rows), rows)
 
     def test_emit_human_table_contains_values(self):
         buf = io.StringIO()
