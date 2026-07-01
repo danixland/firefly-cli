@@ -19,7 +19,7 @@ class TestTxAdd(unittest.TestCase):
                                                 "attributes": {}}}
         args = MagicMock(amount="42.50", source="Checking", dest="Groceries",
                          desc="food", date="2026-06-30", category=None,
-                         tags=None, type=None, dry_run=False)
+                         tags=None, type=None, dry_run=False, skip_dupes=False)
         rc = tx.cmd_add(args, ctx)
         self.assertEqual(rc, 0)
         method, path = client.request.call_args[0][:2]
@@ -40,7 +40,7 @@ class TestTxAdd(unittest.TestCase):
         client.request.return_value = {"data": {"id": "1", "attributes": {}}}
         args = MagicMock(amount="1000", source="Salary", dest="Checking",
                          desc="pay", date=None, category=None, tags=None,
-                         type=None, dry_run=False)
+                         type=None, dry_run=False, skip_dupes=False)
         tx.cmd_add(args, ctx)
         self.assertEqual(client.request.call_args[1]["body"]["transactions"][0]["type"],
                          "deposit")
@@ -51,7 +51,7 @@ class TestTxAdd(unittest.TestCase):
         client.request.return_value = {"data": {"id": "1", "attributes": {}}}
         args = MagicMock(amount="5", source="A", dest="B", desc=None, date=None,
                          category=None, tags="food,fun", type="transfer",
-                         dry_run=False)
+                         dry_run=False, skip_dupes=False)
         tx.cmd_add(args, ctx)
         split = client.request.call_args[1]["body"]["transactions"][0]
         self.assertEqual(split["type"], "transfer")
@@ -64,7 +64,7 @@ class TestTxAdd(unittest.TestCase):
         client.request.return_value = {"data": {"id": "1", "attributes": {}}}
         args = MagicMock(amount="5", source="A", dest="B", desc=None, date=None,
                          category="Brand New Cat", tags=None, type="withdrawal",
-                         dry_run=False)
+                         dry_run=False, skip_dupes=False)
         tx.cmd_add(args, ctx)
         split = client.request.call_args[1]["body"]["transactions"][0]
         self.assertEqual(split["category_name"], "Brand New Cat")
@@ -73,7 +73,7 @@ class TestTxAdd(unittest.TestCase):
         ctx, client, resolver = make_ctx()
         resolver.account.side_effect = lambda n: {"id": "1", "type": "asset", "name": n}
         args = MagicMock(amount="5", source="A", dest="B", desc="x", date="2026-06-01",
-                         category=None, tags=None, type="withdrawal", dry_run=True)
+                         category=None, tags=None, type="withdrawal", dry_run=True, skip_dupes=False)
         rc = tx.cmd_add(args, ctx)
         self.assertEqual(rc, 0)
         client.request.assert_not_called()  # accounts resolved, nothing written
@@ -84,11 +84,65 @@ class TestTxAdd(unittest.TestCase):
         ctx, client, resolver = make_ctx()
         resolver.account.side_effect = ResolutionError('No account named "B"')
         args = MagicMock(amount="5", source="A", dest="B", desc=None, date=None,
-                         category=None, tags=None, type="withdrawal", dry_run=True)
+                         category=None, tags=None, type="withdrawal", dry_run=True, skip_dupes=False)
         with self.assertRaises(ResolutionError):
             tx.cmd_add(args, ctx)
         client.request.assert_not_called()
         resolver.category.assert_not_called()
+
+    def test_skip_dupes_skips_when_match_exists(self):
+        ctx, client, resolver = make_ctx()
+        resolver.account.side_effect = lambda n: {
+            "A": {"id": "1", "name": "A", "type": "asset"},
+            "B": {"id": "2", "name": "B", "type": "expense"},
+        }[n]
+        # search finds an existing tx -> skip, no POST
+        client.request.return_value = {"data": [
+            {"id": "441", "attributes": {}}]}
+        args = MagicMock(amount="9.99", source="A", dest="B", desc="x",
+                         date="2026-06-10", category=None, tags=None,
+                         type=None, dry_run=False, skip_dupes=True)
+        rc = tx.cmd_add(args, ctx)
+        self.assertEqual(rc, 0)
+        # exactly one call, the GET search; no POST
+        self.assertEqual(client.request.call_count, 1)
+        method, path = client.request.call_args[0][:2]
+        self.assertEqual(method, "GET")
+        q = client.request.call_args[1]["params"]["query"]
+        self.assertIn("amount_is:9.99", q)
+        self.assertIn("date_on:2026-06-10", q)
+        self.assertIn("source_account_is:", q)
+        self.assertIn("destination_account_is:", q)
+
+    def test_skip_dupes_writes_when_no_match(self):
+        ctx, client, resolver = make_ctx()
+        resolver.account.side_effect = lambda n: {
+            "A": {"id": "1", "name": "A", "type": "asset"},
+            "B": {"id": "2", "name": "B", "type": "expense"},
+        }[n]
+        # first call = search (empty), second = POST
+        client.request.side_effect = [
+            {"data": []},
+            {"data": {"id": "99", "attributes": {}}},
+        ]
+        args = MagicMock(amount="9.99", source="A", dest="B", desc="x",
+                         date="2026-06-10", category=None, tags=None,
+                         type=None, dry_run=False, skip_dupes=True)
+        rc = tx.cmd_add(args, ctx)
+        self.assertEqual(rc, 0)
+        self.assertEqual(client.request.call_count, 2)
+        self.assertEqual(client.request.call_args[0][:2],
+                         ("POST", "/api/v1/transactions"))
+
+    def test_dry_run_beats_skip_dupes_no_search(self):
+        ctx, client, resolver = make_ctx()
+        resolver.account.side_effect = lambda n: {"id": "1", "type": "asset", "name": n}
+        args = MagicMock(amount="5", source="A", dest="B", desc=None, date="2026-06-01",
+                         category=None, tags=None, type="withdrawal",
+                         dry_run=True, skip_dupes=True)
+        rc = tx.cmd_add(args, ctx)
+        self.assertEqual(rc, 0)
+        client.request.assert_not_called()  # dry-run wins: no search, no write
 
 class TestTxEdit(unittest.TestCase):
     def test_edit_sends_only_provided_fields(self):

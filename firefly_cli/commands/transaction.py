@@ -32,6 +32,8 @@ def _add_args(p):
                    help="withdrawal|deposit|transfer (overrides inference)")
     p.add_argument("--dry-run", dest="dry_run", action="store_true",
                    help="resolve accounts and show what would be sent; write nothing")
+    p.add_argument("--skip-dupes", dest="skip_dupes", action="store_true",
+                   help="skip if a tx with same amount+date+source+destination exists")
 
 @registry.command("tx add", help="record a transaction; source/destination resolve to accounts, category/tags auto-create", args=_add_args)
 def cmd_add(args, ctx):
@@ -54,8 +56,20 @@ def cmd_add(args, ctx):
         split["tags"] = [t.strip() for t in args.tags.split(",") if t.strip()]
     if args.dry_run:
         # Accounts already resolved above (missing name = hard error). Write nothing.
+        # dry-run wins over skip-dupes: caller wants a preview, not a write.
         output.emit({"dry_run": True, "would_send": split}, human=ctx.human)
         return 0
+    if args.skip_dupes:
+        # Firefly's search matches amount numerically; names quoted for spaces.
+        query = (f'amount_is:{split["amount"]} date_on:{split["date"]} '
+                 f'source_account_is:"{src["name"]}" '
+                 f'destination_account_is:"{dst["name"]}"')
+        hits = output.unwrap(ctx.client.request(
+            "GET", "/api/v1/search/transactions", params={"query": query}))
+        if hits:
+            output.emit({"skipped": "duplicate", "matched_id": hits[0].get("id")},
+                        human=ctx.human)
+            return 0
     resp = ctx.client.request("POST", "/api/v1/transactions",
                               body={"transactions": [split]})
     output.emit(output.unwrap(resp), human=ctx.human)

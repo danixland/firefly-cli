@@ -56,7 +56,8 @@ firefly account balance <name|id> [--at YYYY-MM-DD]
 firefly account create <name> --type asset|expense|revenue
         [--opening-balance N] [--currency CODE]
 firefly tx add <amount> --from <acct> --to <acct>
-        [--desc TEXT] [--date YYYY-MM-DD] [--category NAME] [--tags a,b] [--type T] [--dry-run]
+        [--desc TEXT] [--date YYYY-MM-DD] [--category NAME] [--tags a,b] [--type T]
+        [--dry-run] [--skip-dupes]
 firefly tx edit <id>
         [--amount N] [--date YYYY-MM-DD] [--desc TEXT] [--from <acct>] [--to <acct>]
         [--category NAME] [--tags a,b] [--type T]   # only fields passed are changed
@@ -110,6 +111,16 @@ sends nothing, printing `{"dry_run": true, "would_send": {...}}`. A missing
 account is still a hard error (exit 1). Recipe: dry-run every row, create any
 accounts the errors name, then run the batch for real.
 
+**Idempotent re-runs (avoid duplicate rows):** re-importing the same rows
+(a retried or double-read batch) otherwise creates phantom duplicates and
+drifts balances. Pass `--skip-dupes` to `tx add`: before writing it searches
+for an existing tx with the same amount + date + source + destination, and if
+one is found emits `{"skipped": "duplicate", "matched_id": "<id>"}` and exits 0
+without writing. Off by default (one extra search per add only when set). Note
+it matches amount+date+accounts, not description, so two genuinely distinct
+purchases of the same value, same day, between the same accounts look like a
+duplicate; omit `--skip-dupes` where that is expected.
+
 **Check a balance:**
 ```bash
 firefly account balance test01            # -> {"id","name","current_balance"}
@@ -148,6 +159,10 @@ firefly tx delete 76 --yes        # remove a duplicate
   a truncated list makes a correct ledger look wrong.
 - Amounts are strings in responses, often with trailing zeros
   (`"0.010000000000"`). Compare numerically, do not string-match.
+- A missing or deleted transaction id returns `API error 401: Unauthenticated.`
+  (not 404) on `tx get`/`tx edit`/`tx delete`. This is a Firefly quirk, not an
+  auth failure: if other commands work, the id simply does not exist. After a
+  `tx delete`, a 401 on that id confirms it is gone.
 - Dates in `tx list` filter by transaction date; omit them to use Firefly's
   default period, which may hide older transactions. Pass an explicit `--since`
   to be sure.
